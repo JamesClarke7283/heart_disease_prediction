@@ -31,7 +31,7 @@ df = pd.read_csv("dataset.csv")
 # 6. Create training and test datasets
 X = df.drop('chd', axis=1)
 y = df['chd']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=42)
 
 # 7. Normalize the data
 scaler = StandardScaler()
@@ -53,7 +53,7 @@ model.add(Dense(1, activation='sigmoid'))
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # Define early stopping
-early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
+early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
 
 # Fit the model and get the training history
 history = model.fit(X_train, y_train, batch_size=32, epochs=200, validation_split=0.2, callbacks=[early_stop], verbose=1)
@@ -63,6 +63,9 @@ train_acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 train_loss = history.history['loss']
 val_loss = history.history['val_loss']
+
+# Accuracy
+print("Training Accuracy: {:.4f}".format(train_acc[-1]))
 
 # Write the metrics to a CSV file
 with open('metrics.csv', mode='w') as file:
