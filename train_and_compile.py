@@ -5,13 +5,17 @@ from io import StringIO
 from scipy.io.arff import loadarff
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dense, Dropout
 import matplotlib.pyplot as plt
 import pickle
+import csv
+
+base_filename = 'heartdisease_model_dropout'
+model_filename = base_filename + '.h5'
+scaler_filename = base_filename + '_scaler.pkl'
 
 # 1. Download the data
 url = "https://www.openml.org/data/download/1592290/phpgNaXZe"
@@ -22,86 +26,70 @@ content = response.content.decode('utf-8')
 arff_data, arff_meta = loadarff(StringIO(content))
 
 # 3. Convert ARFF data to a DataFrame
-df = pd.DataFrame(arff_data)
-
-# 4. Update the attributes (columns) with significant names
-column_names = ['sbp', 'tobacco', 'ldl', 'adiposity', 'famhist', 'type', 'obesity', 'alcohol', 'age', 'chd']
-df.columns = column_names
-
-print(df.head(50))
-
-# 5. Make the necessary corrections on the data
-df['famhist'] = df['famhist'].map({b'1': 1, b'2': 0})
-df['chd'] = df['chd'].map({b'1': 0, b'2': 1}).astype(np.int64)
-
-print(df.head(50))
+df = pd.read_csv("dataset.csv")
 
 # 6. Create training and test datasets
 X = df.drop('chd', axis=1)
 y = df['chd']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-print(X_train)
 # 7. Normalize the data
 scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
 
 # Save the fitted scaler to a file
-with open('scaler.pkl', 'wb') as f:
+with open(scaler_filename, 'wb') as f:
     pickle.dump(scaler, f)
+
+
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
 # 8. Build and train the neural network
 model = Sequential()
 model.add(Dense(32, activation='relu', input_dim=X_train.shape[1]))
+model.add(Dropout(0.5))
 model.add(Dense(16, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
-
-early_stop = EarlyStopping(monitor='val_loss', patience=5, mode='min')
-
-# Use Batch Gradient Descent by setting batch_size equal to the number of training samples
-batch_size = len(X_train)
-
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-history = model.fit(X_train, y_train, batch_size=batch_size, epochs=50, validation_split=0.2, verbose=1, callbacks=[early_stop])
 
-# 9. Calculate the accuracy, precision, recall, and F1 score of the neural network
-y_pred = model.predict(X_test)
-y_pred = (y_pred > 0.5).astype(int)
+# Define early stopping
+early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=10)
 
-conf_matrix = confusion_matrix(y_test, y_pred)
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred, average='weighted')
-recall = recall_score(y_test, y_pred, average='weighted')
-f1 = f1_score(y_test, y_pred, average='weighted')
+# Fit the model and get the training history
+history = model.fit(X_train, y_train, batch_size=32, epochs=200, validation_split=0.2, callbacks=[early_stop], verbose=1)
 
-# Print all metrics
-print("Confusion Matrix:\n", conf_matrix)
-print("Accuracy:", accuracy)
-print("Precision:", precision)
-print("Recall:", recall)
-print("F1 Score:", f1)
+# Get the training and validation metrics for each epoch
+train_acc = history.history['accuracy']
+val_acc = history.history['val_accuracy']
+train_loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+# Write the metrics to a CSV file
+with open('metrics.csv', mode='w') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Epoch', 'Training Accuracy', 'Validation Accuracy', 'Training Loss', 'Validation Loss'])
+    for i in range(len(train_acc)):
+        writer.writerow([i+1, train_acc[i], val_acc[i], train_loss[i], val_loss[i]])
 
 # Save the trained model
-model.save('heart_disease_model_50epochs.h5')
+model.save(model_filename)
+# Visualize the results
 
-# Visualise the results
 plt.figure(figsize=(12, 4))
-epochs = range(1, len(history.history['accuracy']) + 1)
+epochs = range(1, len(train_acc) + 1)
 
 plt.subplot(1, 2, 1)
-plt.plot(epochs, history.history['accuracy'], label='Training accuracy')
-plt.plot(epochs, history.history['val_accuracy'], label='Validation accuracy')
+plt.plot(epochs, train_acc, label='Training accuracy')
+plt.plot(epochs, val_acc, label='Validation accuracy')
 plt.xlabel('Epochs')
 plt.ylabel('Accuracy')
 plt.legend()
 
 plt.subplot(1, 2, 2)
-plt.plot(epochs, history.history['loss'], label='Training loss')
-plt.plot(epochs, history.history['val_loss'], label='Validation loss')
+plt.plot(epochs, train_loss, label='Training loss')
+plt.plot(epochs, val_loss, label='Validation loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
 
 plt.show()
-
