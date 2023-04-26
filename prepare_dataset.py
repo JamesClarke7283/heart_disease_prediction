@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import pickle
 import csv
 
+
 def sa_heart():
     # 1. Download the data
     url = "https://www.openml.org/data/download/1592290/phpgNaXZe"

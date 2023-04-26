@@ -36,27 +36,30 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_
 # 7. Normalize the data
 scaler = StandardScaler()
 
-# Save the fitted scaler to a file
-with open(scaler_filename, 'wb') as f:
-    pickle.dump(scaler, f)
-
 
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
+
+# Save the fitted scaler to a file
+with open(scaler_filename, 'wb') as f:
+    pickle.dump(scaler, f)
 
 # 8. Build and train the neural network
 model = Sequential()
 model.add(Dense(32, activation='relu', input_dim=X_train.shape[1]))
 model.add(Dropout(0.5))
-model.add(Dense(16, activation='relu'))
+model.add(Dense(32, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # Define early stopping
 early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
 
+# Batch Gradient Descent
+batch_size = len(X_train)
+
 # Fit the model and get the training history
-history = model.fit(X_train, y_train, batch_size=32, epochs=200, validation_split=0.2, callbacks=[early_stop], verbose=1)
+history = model.fit(X_train, y_train, batch_size=batch_size, epochs=200, validation_split=0.2, callbacks=[early_stop], verbose=1)
 
 # Get the training and validation metrics for each epoch
 train_acc = history.history['accuracy']

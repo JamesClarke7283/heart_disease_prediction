@@ -5,13 +5,13 @@ from tensorflow.keras.models import load_model
 import pickle
 
 # Load the saved model
-model = load_model('heart_disease_model_50epochs.h5')
+model = load_model('heartdisease_model_dropout.h5')
 
 # Load and preprocess new data (this should be a DataFrame containing the same features as the training data)
 new_data = pd.DataFrame({'sbp': [140], 'tobacco': [0.5], 'ldl': [3.5], 'adiposity': [25], 'famhist': [1], 'type': [60], 'obesity': [28], 'alcohol': [10], 'age': [50]})
 
 # Load the saved scaler from the file
-with open('scaler.pkl', 'rb') as f:
+with open('heartdisease_model_dropout_scaler.pkl', 'rb') as f:
     scaler = pickle.load(f)
 
 # Normalize the new data using the loaded scaler
