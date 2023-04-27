@@ -5,3 +5,5 @@ __pycache__
 *.csv
 *.pkl
 *.h5
+*.pdf
+.venv-old

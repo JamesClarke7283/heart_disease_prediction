@@ -39,7 +39,8 @@ def sa_heart():
 def main():
     df = sa_heart()
     print(df.head(50))
-    df.to_csv("dataset.csv")
+    df.to_csv("dataset.csv", index=False)
+
 
 if __name__ == "__main__":
     main()
